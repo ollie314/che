@@ -45,24 +45,6 @@ export class ListWorkspacesCtrl {
     this.workspacesSelectedStatus = {};
     this.menuOptions = [
       {
-        title: 'Select all workspaces',
-        onclick: () => {
-          this.selectAllWorkspaces();
-        },
-        disabled: () => {
-          return this.isAllWorkspacesSelected();
-        }
-      },
-      {
-        title: 'Deselect all workspaces',
-        onclick: () => {
-          this.deselectAllWorkspaces();
-        },
-        disabled: () => {
-          return this.isNoWorkspacesSelected();
-        }
-      },
-      {
         title: 'Delete selected workspaces',
         onclick: () => {
           this.deleteSelectedWorkspaces();

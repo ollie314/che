@@ -8,42 +8,58 @@
   line-height 22px
   cursor pointer
 
+
   & > *:last-child
     margin-right 10px
 
   & .che-xs-header
-    text-transform uppercase
-    color $frame-subscription-color
     display inline-block
-    line-height 22px
+    float left
+    text-transform uppercase
+    vertical-align middle
+    color $primary-color
     min-width 65px
 
-  div
-    display flex
 
 .workspace-item-name
   font-size 1em
   color $label-primary-color
 
+  & > *
+   display inline-block
+   line-height 22px
+   float left
+
+  .spinner > div
+    float left
+
 .workspace-actions
-  width 100%
   margin-right 10px
   display inline-block
-  color $label-info-color
-
-  *
-    float right
-
-  *:before
-    vertical-align middle
-    font-size 22px
-    position relative
-    top 2px
+  vertical-align middle
+  color $list-action-color
 
   a
     text-decoration none
-    display inline-flex
     color inherit
+
+  & > *:hover
+    color $list-action-hover-color
+
+  & > *:not(.tooltip)
+    display inline-block
+    float left
+    height 22px
+    margin-right 10px
+
+  *:before
+    position relative
+    top 1px
+    font-size 22px
+
+  .fa-plus-square-o:before
+    position relative
+    top 2px
 
 .workspace-item-temp
   color $label-info-color

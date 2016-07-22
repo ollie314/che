@@ -1,7 +1,95 @@
 .che-list-header
+  margin-top 15px
+
+.che-list-add-button,
+.che-list-search
+  display inline-block
+  height 30px
+  line-height 28px
+  margin 0 15px 15px 15px
+  border 1px solid $list-header-color;
+  che-border-radius(2px)
+
+.che-list-add-button
+  width auto
+  padding-left 15px
+  padding-right 15px
+  background-color $list-header-color;
+  float left
+
+  &:hover
+    background-color rgb(67, 130, 203);
+    border 1px solid rgb(67, 130, 203);
+
+  a:focus,
+  a:hover
+    text-decoration none
+
+  & > *
+    display inline-block
+    outline none
+    width inherit
+    text-align center
+    vertical-align middle
+
+  span
+    outline none
+    font-size 16px
+    font-weight bold
+    color $list-header-button-color
+
+.che-list-search
+  overflow hidden
+  width 150px
+  float right
+
+  i::before
+    font-size 16px
+
+  .header-search-icon i
+    color $list-header-color
+
+  .header-close-icon i
+    color $default-color
+
+  .header-search-input input
+    color $default-dark-color
+    text-align left
+    width 100%
+    height inherit
+    font-size 16px
+    box-shadow none
+    outline none
+    border none
+    padding 0 5px 0 5px
+    text-overflow ellipsis
+
+  .header-search-input input::-webkit-input-placeholder
+    color $list-header-color
+    text-transform uppercase
+    margin-left 5px
+    text-align left
+
+  .header-search-input input::-moz-placeholder
+    color $list-header-color
+    text-transform uppercase
+    margin-left 5px
+    text-align left
+
+  & > *
+    margin 0 5px 0 5px
+    line-height inherit
+
+    *
+     outline none
+     text-align center
+     line-height inherit
+
+.che-list-header md-item
   border-top 1px solid $list-separator-color
   display inline-block
   width 100%
+  float left
 
 .che-list-header-content
   width 100%

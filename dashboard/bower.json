@@ -33,7 +33,8 @@
     "zeroclipboard": "2.2.0",
     "angular-uuid4": "0.3.0",
     "angular-file-upload": "2.0.0",
-    "jquery": "1.8.1"
+    "jquery": "1.8.1",
+    "term.js": "https://github.com/chjj/term.js.git#0.0.5"
   },
   "devDependencies": {
   },
