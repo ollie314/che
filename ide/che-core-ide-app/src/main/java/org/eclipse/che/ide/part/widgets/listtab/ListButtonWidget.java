@@ -27,6 +27,7 @@ import com.google.web.bindery.event.shared.EventBus;
 import org.eclipse.che.ide.Resources;
 import org.eclipse.che.ide.api.event.FileEvent;
 import org.eclipse.che.ide.part.widgets.editortab.EditorTabWidget;
+import org.eclipse.che.ide.util.loging.Log;
 
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
@@ -119,6 +120,7 @@ public class ListButtonWidget extends Composite implements ListButton {
         public void onCloseButtonClicked(@NotNull ListItem listItem) {
             popupPanel.hide();
             if (delegate != null && listItem.getTabItem() instanceof EditorTabWidget) {
+                Log.error(getClass(), "++++++++++++++++++++++++++++++++++++++ onCloseButtonClicked before close ");
                 eventBus.fireEvent(new FileEvent(((EditorTabWidget)listItem.getTabItem()).getFile(), FileEvent.FileOperation.CLOSE));
             }
         }

@@ -20,6 +20,7 @@ import org.eclipse.che.ide.api.editor.EditorAgent;
 import org.eclipse.che.ide.api.editor.EditorPartPresenter;
 import org.eclipse.che.ide.api.event.FileEvent;
 import org.eclipse.che.ide.api.resources.VirtualFile;
+import org.eclipse.che.ide.util.loging.Log;
 
 import static org.eclipse.che.ide.api.event.FileEvent.FileOperation.CLOSE;
 
@@ -46,6 +47,7 @@ public class CloseAction extends EditorAbstractAction {
 
         for (EditorPartPresenter editor : editorAgent.getOpenedEditors()) {
             if (editor.getEditorInput().getFile().equals(virtualFile)) {
+                Log.error(getClass(), "++++++++++++++++++++++++++++++++++++++ close action before close ");
                 eventBus.fireEvent(new FileEvent(editor.getEditorInput().getFile(), CLOSE));
                 return;
             }

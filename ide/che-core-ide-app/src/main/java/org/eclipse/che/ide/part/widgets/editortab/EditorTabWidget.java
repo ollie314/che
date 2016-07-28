@@ -34,6 +34,7 @@ import org.eclipse.che.ide.api.event.FileEvent;
 import org.eclipse.che.ide.api.event.FileEventHandler;
 import org.eclipse.che.ide.api.filetypes.FileType;
 import org.eclipse.che.ide.api.filetypes.FileTypeRegistry;
+import org.eclipse.che.ide.api.parts.EditorTab;
 import org.eclipse.che.ide.api.parts.PartPresenter;
 import org.eclipse.che.ide.api.parts.PartStackUIResources;
 import org.eclipse.che.ide.api.parts.PartStackView.TabPosition;
@@ -44,6 +45,8 @@ import org.eclipse.che.ide.api.resources.ResourceDelta;
 import org.eclipse.che.ide.api.resources.VirtualFile;
 import org.eclipse.che.ide.part.editor.EditorTabContextMenuFactory;
 import org.eclipse.che.ide.resource.Path;
+import org.eclipse.che.ide.util.UUID;
+import org.eclipse.che.ide.util.loging.Log;
 import org.vectomatic.dom.svg.ui.SVGImage;
 import org.vectomatic.dom.svg.ui.SVGResource;
 
@@ -86,6 +89,7 @@ public class EditorTabWidget extends Composite implements EditorTab, ContextMenu
     private final EventBus                    eventBus;
     private final EditorTabContextMenuFactory editorTabContextMenu;
     private final FileTypeRegistry            fileTypeRegistry;
+    private final String                      id;
 
     private VirtualFile    file;
     private ActionDelegate delegate;
@@ -110,6 +114,7 @@ public class EditorTabWidget extends Composite implements EditorTab, ContextMenu
         this.file = file;
         this.icon = icon;
         this.title.setText(title);
+        this.id = title + UUID.uuid(4);
 
         iconPanel.add(getIcon());
 
@@ -123,7 +128,7 @@ public class EditorTabWidget extends Composite implements EditorTab, ContextMenu
         closeButton.addDomHandler(new ClickHandler() {
             @Override
             public void onClick(ClickEvent event) {
-                eventBus.fireEvent(new FileEvent(EditorTabWidget.this.file, CLOSE));
+                eventBus.fireEvent(new FileEvent(EditorTabWidget.this.getId(), EditorTabWidget.this.file, CLOSE));
             }
         }, ClickEvent.getType());
     }
@@ -199,6 +204,11 @@ public class EditorTabWidget extends Composite implements EditorTab, ContextMenu
         } else {
             title.removeStyleName(resources.partStackCss().lineWarning());
         }
+    }
+
+    @Override
+    public String getId() {
+        return id;
     }
 
     /** {@inheritDoc} */
@@ -308,7 +318,11 @@ public class EditorTabWidget extends Composite implements EditorTab, ContextMenu
 
     @Override
     public void onFileOperation(FileEvent event) {
-        if (event.getOperationType() == CLOSE && event.getFile().equals(file)) {
+        if (event.getOperationType() != CLOSE) {
+            return;
+        }
+
+        if (event.getTabId().equals(this.getId())) {
             delegate.onTabClose(this);
         }
     }
