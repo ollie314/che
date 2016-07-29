@@ -38,6 +38,7 @@ import org.eclipse.che.ide.api.parts.EditorTab;
 import org.eclipse.che.ide.part.widgets.listtab.ListButton;
 import org.eclipse.che.ide.part.widgets.listtab.ListItem;
 import org.eclipse.che.ide.part.widgets.listtab.ListItemWidget;
+import org.eclipse.che.ide.resource.Path;
 import org.eclipse.che.ide.util.loging.Log;
 
 import javax.validation.constraints.NotNull;
@@ -124,54 +125,53 @@ public class EditorPartStackPresenter extends PartStackPresenter implements Edit
     /** {@inheritDoc} */
     @Override
     public void addPart(@NotNull PartPresenter part) {
-        if (!containsPart(part)) {
-            part.addPropertyListener(propertyListener);
+        VirtualFile file = part instanceof AbstractEditorPresenter ? ((AbstractEditorPresenter)part).getEditorInput().getFile()
+                                                                   : null;
+        if (file == null) {
+            return;
+        }
 
-            VirtualFile file = part instanceof AbstractEditorPresenter ? ((AbstractEditorPresenter)part).getEditorInput().getFile()
-                                                                       : null;
+        part.addPropertyListener(propertyListener);
 
-            final EditorTab editorTab = tabItemFactory.createEditorPartButton(file, part.getTitleImage(), part.getTitle());
+        final EditorTab editorTab = tabItemFactory.createEditorPartButton(file, part.getTitleImage(), part.getTitle());
+
+        part.addPropertyListener(new PropertyListener() {
+            @Override
+            public void propertyChanged(PartPresenter source, int propId) {
+                if (propId == EditorPartPresenter.PROP_INPUT && source instanceof EditorPartPresenter) {
+                    editorTab.setReadOnlyMark(((EditorPartPresenter)source).getEditorInput().getFile().isReadOnly());
+                }
+            }
+        });
+
+        editorTab.setDelegate(this);
+
+        parts.put(editorTab, part);
+        partsOrder.add(part);
+
+        view.addTab(editorTab, part);
+
+        TabItem tabItem = getTabByPart(part);
+
+        if (tabItem != null) {
+            ListItem item = new ListItemWidget(tabItem);
+            listButton.addListItem(item);
+            items.put(item, tabItem);
+        }
+
+        if (part instanceof EditorWithErrors) {
+            final EditorWithErrors presenter = ((EditorWithErrors)part);
 
             part.addPropertyListener(new PropertyListener() {
                 @Override
                 public void propertyChanged(PartPresenter source, int propId) {
-                    if (propId == EditorPartPresenter.PROP_INPUT && source instanceof EditorPartPresenter) {
-                        editorTab.setReadOnlyMark(((EditorPartPresenter)source).getEditorInput().getFile().isReadOnly());
-                    }
+                    EditorState editorState = presenter.getErrorState();
+
+                    editorTab.setErrorMark(ERROR.equals(editorState));
+                    editorTab.setWarningMark(WARNING.equals(editorState));
                 }
             });
-
-            editorTab.setDelegate(this);
-
-            parts.put(editorTab, part);
-            partsOrder.add(part);
-
-            view.addTab(editorTab, part);
-
-            TabItem tabItem = getTabByPart(part);
-
-            if (tabItem != null) {
-                ListItem item = new ListItemWidget(tabItem);
-                listButton.addListItem(item);
-                items.put(item, tabItem);
-            }
-
-            if (part instanceof EditorWithErrors) {
-                final EditorWithErrors presenter = ((EditorWithErrors)part);
-
-                part.addPropertyListener(new PropertyListener() {
-                    @Override
-                    public void propertyChanged(PartPresenter source, int propId) {
-                        EditorState editorState = presenter.getErrorState();
-
-                        editorTab.setErrorMark(ERROR.equals(editorState));
-                        editorTab.setWarningMark(WARNING.equals(editorState));
-                    }
-                });
-            }
         }
-
-        view.selectTab(part);
     }
 
     /** {@inheritDoc} */
@@ -261,6 +261,16 @@ public class EditorPartStackPresenter extends PartStackPresenter implements Edit
         for (TabItem tab : parts.keySet()) {
             if (tab instanceof EditorTab && ((EditorTab)tab).getId().equals(tabId)) {
                 return (EditorPartPresenter)parts.get(tab);
+            }
+        }
+        return null;
+    }
+
+    @Nullable
+    public PartPresenter getPartByPath(Path path) {
+        for (TabItem tab : parts.keySet()) {
+            if (((EditorTab)tab).getFile().getLocation().equals(path)) {
+                return parts.get(tab);
             }
         }
         return null;

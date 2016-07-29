@@ -23,6 +23,7 @@ import org.eclipse.che.ide.api.event.ActivePartChangedHandler;
 import org.eclipse.che.ide.api.parts.EditorPartStack;
 import org.eclipse.che.ide.api.parts.PartPresenter;
 import org.eclipse.che.ide.part.editor.EditorPartStackFactory;
+import org.eclipse.che.ide.resource.Path;
 
 import javax.validation.constraints.NotNull;
 import java.util.LinkedList;
@@ -91,6 +92,7 @@ public class EditorMultiPartStackPresenter implements EditorPartStack, ActivePar
 
         EditorPartStack relativePartStack = getPartStackByTabId(constraint.relativeId);
         if (relativePartStack != null) {
+            //view of relativePartStack will be split corresponding to constraint on two areas and part will be added into created area
             addEditorPartStack(part, relativePartStack, constraint);
         }
     }
@@ -168,7 +170,7 @@ public class EditorMultiPartStackPresenter implements EditorPartStack, ActivePar
     }
 
     @Nullable
-    private EditorPartStack getPartStackByPart(PartPresenter part) {
+    public EditorPartStack getPartStackByPart(PartPresenter part) {
         if (part == null) {
             return null;
         }
@@ -200,6 +202,11 @@ public class EditorMultiPartStackPresenter implements EditorPartStack, ActivePar
                 return editorPart;
             }
         }
+        return null;
+    }
+
+    @Override
+    public PartPresenter getPartByPath(Path path) {
         return null;
     }
 

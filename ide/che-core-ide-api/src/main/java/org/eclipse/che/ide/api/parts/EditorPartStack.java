@@ -11,6 +11,7 @@
 package org.eclipse.che.ide.api.parts;
 
 import org.eclipse.che.ide.api.editor.EditorPartPresenter;
+import org.eclipse.che.ide.resource.Path;
 
 import javax.validation.constraints.NotNull;
 
@@ -23,4 +24,7 @@ import javax.validation.constraints.NotNull;
 public interface EditorPartStack extends PartStack {
 
     EditorPartPresenter getPartByTabId(@NotNull String tabId);
+
+    PartPresenter getPartByPath(Path path);
+
 }
