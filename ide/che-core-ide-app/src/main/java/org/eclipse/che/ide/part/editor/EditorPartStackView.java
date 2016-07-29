@@ -11,6 +11,7 @@
 package org.eclipse.che.ide.part.editor;
 
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.dom.client.Style;
 import com.google.gwt.event.dom.client.MouseDownEvent;
 import com.google.gwt.event.dom.client.MouseDownHandler;
@@ -23,14 +24,11 @@ import com.google.gwt.user.client.ui.FlowPanel;
 import com.google.gwt.user.client.ui.IsWidget;
 import com.google.gwt.user.client.ui.ResizeComposite;
 import com.google.gwt.user.client.ui.Widget;
-import com.google.inject.Inject;
 
 import org.eclipse.che.ide.api.editor.texteditor.TextEditorPresenter;
 import org.eclipse.che.ide.api.parts.PartPresenter;
-import org.eclipse.che.ide.api.parts.PartStackUIResources;
 import org.eclipse.che.ide.api.parts.PartStackView;
 import org.eclipse.che.ide.part.widgets.listtab.ListButton;
-import org.eclipse.che.ide.util.loging.Log;
 
 import javax.validation.constraints.NotNull;
 import java.util.HashMap;
@@ -66,15 +64,12 @@ public class EditorPartStackView extends ResizeComposite implements PartStackVie
     private final Map<PartPresenter, TabItem> tabs;
     private final AcceptsOneWidget            partViewContainer;
     private final LinkedList<PartPresenter>   contents;
-    private final PartStackUIResources        resources;
 
     private ActionDelegate delegate;
     private ListButton     listButton;
     private TabItem        activeTab;
 
-    @Inject
-    public EditorPartStackView(PartStackUIResources resources) {
-        this.resources = resources;
+    public EditorPartStackView() {
         this.tabs = new HashMap<>();
         this.contents = new LinkedList<>();
 
@@ -145,28 +140,29 @@ public class EditorPartStackView extends ResizeComposite implements PartStackVie
      * Updates visibility of file list button.
      */
     private void updateDropdownVisibility() {
-//        Log.error(getClass(), "******* updateDropdownVisibility");
-        listButton.setVisible(false);
+        if (listButton == null) {
+            return;
+        }
 
-//        if (tabsPanel.getWidgetCount() == 1) {
-//            listButton.setVisible(false);
-//            return;
-//        }
-//
-//        int width = 0;
-//        for (int i = 0; i < tabsPanel.getWidgetCount(); i++) {
-//            if (listButton != null && listButton != tabsPanel.getWidget(i)) {
-//                if (tabsPanel.getWidget(i).isVisible()) {
-//                    width += tabsPanel.getWidget(i).getOffsetWidth();
-//                } else {
-//                    tabsPanel.getWidget(i).setVisible(true);
-//                    width += tabsPanel.getWidget(i).getOffsetWidth();
-//                    tabsPanel.getWidget(i).setVisible(false);
-//                }
-//            }
-//        }
-//
-//        listButton.setVisible(width >= tabsPanel.getOffsetWidth());
+        if (tabsPanel.getWidgetCount() == 1) {
+            listButton.setVisible(false);
+            return;
+        }
+
+        int width = 0;
+        for (int i = 0; i < tabsPanel.getWidgetCount(); i++) {
+            if (listButton != tabsPanel.getWidget(i)) {
+                if (tabsPanel.getWidget(i).isVisible()) {
+                    width += tabsPanel.getWidget(i).getOffsetWidth();
+                } else {
+                    tabsPanel.getWidget(i).setVisible(true);
+                    width += tabsPanel.getWidget(i).getOffsetWidth();
+                    tabsPanel.getWidget(i).setVisible(false);
+                }
+            }
+        }
+
+        listButton.setVisible(width >= tabsPanel.getOffsetWidth());
     }
 
     /**
@@ -280,9 +276,13 @@ public class EditorPartStackView extends ResizeComposite implements PartStackVie
 
     @Override
     public void onResize() {
-        super.onResize();
-        updateDropdownVisibility();
-        ensureActiveTabVisible();
+        Scheduler.get().scheduleDeferred(new Scheduler.ScheduledCommand() {
+            @Override
+            public void execute() {
+                EditorPartStackView.super.onResize();
+                updateDropdownVisibility();
+                ensureActiveTabVisible();
+            }
+        });
     }
-
 }
