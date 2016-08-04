@@ -107,8 +107,6 @@ public class ConsolesPanelPresenter implements ConsolesPanelView.ActionDelegate,
     final Map<String, OutputConsole>     consoles;
     final Map<OutputConsole, String>     consoleCommands;
 
-    private OutputConsole workspaceConsole;
-
     ProcessTreeNode rootNode;
     ProcessTreeNode selectedTreeNode;
     ProcessTreeNode contextTreeNode;
@@ -160,7 +158,7 @@ public class ConsolesPanelPresenter implements ConsolesPanelView.ActionDelegate,
 
         rootNode = new ProcessTreeNode(ROOT_NODE, null, null, null, rootNodes);
 
-        workspaceConsole = commandConsoleFactory.create("");
+        OutputConsole workspaceConsole = commandConsoleFactory.create("");
         updateCommandOutput("", workspaceConsole);
 
         fetchMachines();
@@ -243,8 +241,29 @@ public class ConsolesPanelPresenter implements ConsolesPanelView.ActionDelegate,
         throw new IllegalArgumentException("Dev machine can not be null");
     }
 
+    /**
+     * Prints text to the dev machine console.
+     *
+     * @param text
+     *          text to be printed
+     */
     public void printDevMachineOutput(String text) {
         OutputConsole console = consoles.get("");
+        if (console != null && console instanceof DefaultOutputConsole) {
+            ((DefaultOutputConsole)console).printText(text);
+        }
+    }
+
+    /**
+     * Prints text to the machine console.
+     *
+     * @param machineID
+     *          machine ID
+     * @param text
+     *          text to be printed
+     */
+    public void printMachineOutput(String machineID, String text) {
+        OutputConsole console = consoles.get(machineID);
         if (console != null && console instanceof DefaultOutputConsole) {
             ((DefaultOutputConsole)console).printText(text);
         }
@@ -266,6 +285,11 @@ public class ConsolesPanelPresenter implements ConsolesPanelView.ActionDelegate,
         rootNodes.add(machineNode);
 
         view.setProcessesData(rootNode);
+
+        if (!machine.getConfig().isDev() && !consoles.containsKey(machine.getId())) {
+            OutputConsole workspaceConsole = commandConsoleFactory.create(machine.getId());
+            updateCommandOutput(machine.getId(), workspaceConsole);
+        }
 
         restoreState(machine);
 
@@ -693,8 +717,10 @@ public class ConsolesPanelPresenter implements ConsolesPanelView.ActionDelegate,
 
     @Override
     public void onWorkspaceStarting(WorkspaceStartingEvent event) {
-        workspaceConsole = commandConsoleFactory.create("");
-        updateCommandOutput("", workspaceConsole);
+        if (!consoles.containsKey("")) {
+            OutputConsole workspaceConsole = commandConsoleFactory.create("");
+            updateCommandOutput("", workspaceConsole);
+        }
 
         fetchMachines();
     }
@@ -718,4 +744,5 @@ public class ConsolesPanelPresenter implements ConsolesPanelView.ActionDelegate,
         view.selectNode(null);
         view.setProcessesData(rootNode);
     }
+
 }
