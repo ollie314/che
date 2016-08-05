@@ -74,7 +74,7 @@ public class DockerRegistryAuthResolver {
             authConfig = normalizeDockerHubRegistryUrl(initialAuthConfig.getAuthConfigs().getConfigs()).get(normalizedRegistry);
         }
         if (authConfig == null) {
-            authConfig = dynamicAuthResolver.getDynamicXRegistryAuth(registry);
+            authConfig = dynamicAuthResolver.getXRegistryAuth(registry);
         }
 
         String authConfigJson;
@@ -103,7 +103,7 @@ public class DockerRegistryAuthResolver {
         if (paramAuthConfigs != null && paramAuthConfigs.getConfigs() != null) {
             authConfigs.putAll(paramAuthConfigs.getConfigs());
         }
-        authConfigs.putAll(dynamicAuthResolver.getDynamicXRegistryConfig());
+        authConfigs.putAll(dynamicAuthResolver.getXRegistryConfig());
 
         authConfigs = normalizeDockerHubRegistryUrl(authConfigs);
 

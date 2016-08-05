@@ -21,19 +21,21 @@ import java.util.Map;
  */
 public interface DockerRegistryDynamicAuthResolver {
     /**
-     * Retrieves actual auth data for specified registry.
-     * Returns null if no credential configured for specified registry.
+     * Retrieves actual auth data for given registry.
+     * If no credential found for given registry null will be returned.
      *
-     * @return actual auth data for specified registry or null if no credentials configured
+     * @param registry
+     *         registry to which
+     * @return dynamic auth data for specified registry or null if no credential found
      */
-    AuthConfig getDynamicXRegistryAuth(String registry);
+    AuthConfig getXRegistryAuth(String registry);
 
     /**
-     * Retrieves all actual auth configs for all registries with dynamic auth credentials.
-     * Returns empty map if no registries with dynamic auth credentials configured.
+     * Retrieves all actual auth configs for all configured registries with dynamic auth credentials.
+     * If no registries with dynamic auth credentials found, empty map will be returned.
      *
-     * @return all dynamic auth configs or empty map if no credentials configured
+     * @return all dynamic auth configs or empty map if no credentials found
      */
-    Map<String, AuthConfig> getDynamicXRegistryConfig();
+    Map<String, AuthConfig> getXRegistryConfig();
 
 }

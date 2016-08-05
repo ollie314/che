@@ -405,7 +405,7 @@ public class DockerRegistryAuthResolverTest {
     @Test
     public void shouldGetXRegistryAuthHeaderValueFromDynamicConfigOnly() {
         when(initialAuthConfig.getAuthConfigs()).thenReturn(emptyAuthConfigs);
-        when(dynamicAuthResolver.getDynamicXRegistryAuth(REGISTRY_WITH_DYNAMIC_PASSWORD_URL))
+        when(dynamicAuthResolver.getXRegistryAuth(REGISTRY_WITH_DYNAMIC_PASSWORD_URL))
                 .thenReturn(dynamicAuthConfigs.getConfigs().get(REGISTRY_WITH_DYNAMIC_PASSWORD_URL));
 
         String base64HeaderValue = authResolver.getXRegistryAuthHeaderValue(REGISTRY_WITH_DYNAMIC_PASSWORD_URL, emptyAuthConfigs);
@@ -416,7 +416,7 @@ public class DockerRegistryAuthResolverTest {
 
     @Test
     public void shouldGetXRegistryAuthHeaderValueFromDynamicConfig() {
-        when(dynamicAuthResolver.getDynamicXRegistryAuth(REGISTRY_WITH_DYNAMIC_PASSWORD_URL))
+        when(dynamicAuthResolver.getXRegistryAuth(REGISTRY_WITH_DYNAMIC_PASSWORD_URL))
                 .thenReturn(dynamicAuthConfigs.getConfigs().get(REGISTRY_WITH_DYNAMIC_PASSWORD_URL));
 
         String base64HeaderValue = authResolver.getXRegistryAuthHeaderValue(REGISTRY_WITH_DYNAMIC_PASSWORD_URL, customAuthConfigs);
@@ -428,7 +428,7 @@ public class DockerRegistryAuthResolverTest {
     @Test
     public void shouldGetXRegistryConfigValueFromDynamicAuthConfigOnly() {
         when(initialAuthConfig.getAuthConfigs()).thenReturn(emptyAuthConfigs);
-        when(dynamicAuthResolver.getDynamicXRegistryConfig()).thenReturn(dynamicAuthConfigs.getConfigs());
+        when(dynamicAuthResolver.getXRegistryConfig()).thenReturn(dynamicAuthConfigs.getConfigs());
 
         String base64HeaderValue = authResolver.getXRegistryConfigHeaderValue(emptyAuthConfigs);
 
