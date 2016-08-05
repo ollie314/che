@@ -13,6 +13,7 @@ package org.eclipse.che.api.git;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
@@ -43,19 +44,45 @@ public class GitUrlUtilsTest {
                               {"ssh@vcsProvider.com:user/test.git"}};
     }
 
-    @DataProvider(name = "otherGitUrlsProvider")
-    public static Object[][] otherGitUrls() {
+    @DataProvider(name = "http(s)GitUrlsProvider")
+    public static Object[][] httpAndHttpsGitUrls() {
         return new Object[][]{{"http://host.xz/path/to/repo.git"},
                               {"https://host.xz/path/to/repo.git"}};
     }
 
-    @Test(dataProvider = "validGitSshUrls")
+    @DataProvider(name = "gitUrlsWithCredentialsProvider")
+    public static Object[][] gitUrlsWithCredentials() {
+        return new Object[][]{{"http://username:password@host.xz/path/to/repo.git"},
+                              {"https://username:password@host.xz/path/to/repo.git"}};
+    }
+
+    @Test(dataProvider = "validGitSshUrlsProvider")
     public void shouldReturnTrueIfGivenUrlIsSsh(String url) throws Exception {
         assertTrue(GitUrlUtils.isSSH(url));
     }
 
-    @Test(dataProvider = "otherGitUrls")
+    @Test(dataProvider = "http(s)GitUrlsProvider")
     public void shouldReturnFalseIfGivenUrlIsNotSsh(String url) throws Exception {
         assertFalse(GitUrlUtils.isSSH(url));
+    }
+
+    @Test(dataProvider = "gitUrlsWithCredentialsProvider")
+    public void shouldReturnTrueIfGivenUrlContainsCredentials(String url) throws Exception {
+        assertTrue(GitUrlUtils.containsCredentials(url));
+    }
+
+    @Test(dataProvider = "http(s)GitUrlsProvider")
+    public void shouldReturnFalseIfGivenUrlDoesNotContainUserNameAndPassword(String url) throws Exception {
+        assertFalse(GitUrlUtils.containsCredentials(url));
+    }
+
+    @Test(dataProvider = "gitUrlsWithCredentialsProvider")
+    public void shouldReturnUsernameIfGivenUrlContainsCredentials(String url) throws Exception {
+        assertEquals(GitUrlUtils.getUsername(url), "username");
+    }
+
+    @Test(dataProvider = "gitUrlsWithCredentialsProvider")
+    public void shouldReturnPasswordIfGivenUrlContainsCredentials(String url) throws Exception {
+        assertEquals(GitUrlUtils.getPassword(url), "password");
     }
 }

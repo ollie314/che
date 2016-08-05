@@ -172,6 +172,7 @@ import static java.nio.file.attribute.PosixFilePermission.OWNER_READ;
 import static java.nio.file.attribute.PosixFilePermission.OWNER_WRITE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.eclipse.che.api.git.GitUrlUtils.containsCredentials;
 import static org.eclipse.che.api.git.shared.ProviderInfo.AUTHENTICATE_URL;
 import static org.eclipse.che.api.git.shared.ProviderInfo.PROVIDER_NAME;
 import static org.eclipse.che.dto.server.DtoFactory.newDto;
@@ -1599,8 +1600,9 @@ class JGitConnection implements GitConnection {
             } else {
                 credentials = credentialsLoader.getUserCredential(remoteUrl);
                 if (credentials != null) {
-                    command.setCredentialsProvider(new UsernamePasswordCredentialsProvider(credentials.getUserName(),
-                                                                                           credentials.getPassword()));
+                    setCredentials(command, credentials.getUserName(), credentials.getPassword());
+                } else if (containsCredentials(remoteUrl)) {
+                    setCredentials(command, GitUrlUtils.getUsername(remoteUrl), GitUrlUtils.getPassword(remoteUrl));
                 }
             }
 
@@ -1633,6 +1635,10 @@ class JGitConnection implements GitConnection {
 
             ProxyAuthenticator.resetAuthenticator();
         }
+    }
+
+    private void setCredentials(TransportCommand command, String username, String password) {
+        command.setCredentialsProvider(new UsernamePasswordCredentialsProvider(username, password));
     }
 
     /**
