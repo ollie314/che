@@ -27,8 +27,8 @@ import org.eclipse.che.ide.api.machine.MachineServiceClient;
 import org.eclipse.che.ide.api.notification.NotificationManager;
 import org.eclipse.che.ide.dto.DtoFactory;
 import org.eclipse.che.ide.extension.machine.client.MachineLocalizationConstant;
-import org.eclipse.che.ide.extension.machine.client.command.valueproviders.CommandPropertyValueProvider;
-import org.eclipse.che.ide.extension.machine.client.command.valueproviders.CommandPropertyValueProviderRegistry;
+import org.eclipse.che.ide.api.machine.CommandPropertyValueProvider;
+import org.eclipse.che.ide.api.machine.CommandPropertyValueProviderRegistry;
 import org.eclipse.che.ide.extension.machine.client.outputspanel.console.CommandConsoleFactory;
 import org.eclipse.che.ide.extension.machine.client.outputspanel.console.CommandOutputConsole;
 import org.eclipse.che.ide.extension.machine.client.processes.ConsolesPanelPresenter;
@@ -119,7 +119,11 @@ public class CommandManager {
                                                      .withCommandLine(arg)
                                                      .withType(configuration.getType().getId());
 
-                final Promise<MachineProcessDto> processPromise = machineServiceClient.executeCommand(machine.getId(), command, outputChannel);
+                final Promise<MachineProcessDto> processPromise =
+                        machineServiceClient.executeCommand(machine.getWorkspaceId(),
+                                                            machine.getId(),
+                                                            command,
+                                                            outputChannel);
                 processPromise.then(new Operation<MachineProcessDto>() {
                     @Override
                     public void apply(MachineProcessDto process) throws OperationException {

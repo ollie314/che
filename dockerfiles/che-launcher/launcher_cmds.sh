@@ -22,6 +22,8 @@ start_che_server() {
     update_che_server
   fi
 
+  ENV_FILE=$(get_list_of_che_system_environment_variables)
+
   info "ECLIPSE CHE: CONTAINER STARTING"
   docker run -d --name "${CHE_SERVER_CONTAINER_NAME}" \
     -v /var/run/docker.sock:/var/run/docker.sock \
@@ -32,6 +34,7 @@ start_che_server() {
     --user="${CHE_USER}" \
     ${CHE_CONF_ARGS} \
     ${CHE_STORAGE_ARGS} \
+    --env-file=$ENV_FILE \
     "${CHE_SERVER_IMAGE_NAME}":"${CHE_VERSION}" \
                 --remote:"${CHE_HOST_IP}" \
                 -s:uid \
@@ -39,6 +42,8 @@ start_che_server() {
                 ${CHE_DEBUG_OPTION} \
                 run > /dev/null
 
+  rm $ENV_FILE
+  
   wait_until_container_is_running 10
   if ! che_container_is_running; then
     error_exit "ECLIPSE CHE: Timeout waiting Che container to start."
@@ -100,7 +105,7 @@ print_debug_info() {
   debug "---------  PLATFORM INFO  -------------"
   debug "DOCKER_INSTALL_TYPE       = ${DOCKER_INSTALL_TYPE}"
   debug "DOCKER_HOST_OS            = $(get_docker_host_os)"
-  debug "DOCKER_HOST_IP            = $(get_docker_host_ip)"
+  debug "DOCKER_HOST_IP            = ${DEFAULT_DOCKER_HOST_IP}"
   debug "DOCKER_DAEMON_VERSION     = $(get_docker_daemon_version)"
   debug ""
   debug ""
@@ -113,8 +118,9 @@ print_debug_info() {
     debug "CHE SERVER CONTAINER ID   = $(get_che_server_container_id)"
     debug "CHE CONF FOLDER           = $(get_che_container_conf_folder)"
     debug "CHE DATA FOLDER           = $(get_che_container_data_folder)"
-    debug "CHE DASHBOARD URL         = http://${CHE_HOSTNAME}:${CHE_PORT}"
-    debug "CHE API URL               = http://${CHE_HOSTNAME}:${CHE_PORT}/api"
+    CURRENT_CHE_PORT=$(docker inspect --format='{{ (index (index .NetworkSettings.Ports "8080/tcp") 0).HostPort }}' ${CHE_SERVER_CONTAINER_NAME})
+    debug "CHE DASHBOARD URL         = http://${DEFAULT_CHE_HOSTNAME}:${CURRENT_CHE_PORT}"  
+    debug "CHE API URL               = http://${DEFAULT_CHE_HOSTNAME}:${CURRENT_CHE_PORT}/api"
     debug 'CHE LOGS                  = run `docker logs -f '${CHE_SERVER_CONTAINER_NAME}'`'
   fi
   debug ""

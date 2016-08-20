@@ -10,16 +10,18 @@
  *******************************************************************************/
 package org.eclipse.che.ide.api.editor.document;
 
+import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.inject.Inject;
+import com.google.web.bindery.event.shared.EventBus;
+
 import org.eclipse.che.api.promises.client.Operation;
 import org.eclipse.che.api.promises.client.OperationException;
+import org.eclipse.che.api.promises.client.Promise;
 import org.eclipse.che.api.promises.client.PromiseError;
 import org.eclipse.che.ide.api.editor.EditorInput;
 import org.eclipse.che.ide.api.event.FileEvent;
 import org.eclipse.che.ide.api.resources.VirtualFile;
 import org.eclipse.che.ide.util.loging.Log;
-import com.google.gwt.user.client.rpc.AsyncCallback;
-import com.google.inject.Inject;
-import com.google.web.bindery.event.shared.EventBus;
 
 import javax.validation.constraints.NotNull;
 
@@ -61,6 +63,11 @@ public class DocumentStorageImpl implements DocumentStorage {
     }
 
     @Override
+    public Promise<String> getDocument(@NotNull VirtualFile file) {
+        return file.getContent();
+    }
+
+    @Override
     public void saveDocument(final EditorInput editorInput, @NotNull final Document document,
                              final boolean overwrite, @NotNull final AsyncCallback<EditorInput> callback) {
         final VirtualFile file = editorInput.getFile();
@@ -69,7 +76,7 @@ public class DocumentStorageImpl implements DocumentStorage {
             @Override
             public void apply(Void arg) throws OperationException {
                 Log.debug(DocumentStorageImpl.class, "Document saved (" + file.getLocation() + ").");
-                DocumentStorageImpl.this.eventBus.fireEvent(new FileEvent(file, FileEvent.FileOperation.SAVE));
+                DocumentStorageImpl.this.eventBus.fireEvent(FileEvent.createSaveFileEvent(file));
                 try {
                     callback.onSuccess(editorInput);
                 } catch (final Exception e) {

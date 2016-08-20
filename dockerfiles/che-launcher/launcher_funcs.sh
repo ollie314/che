@@ -31,7 +31,6 @@ error_exit() {
   error "!!! ${1}"
   error "!!!"
   echo  "---------------------------------------"
-  container_self_destruction
   exit 1
 }
 
@@ -53,10 +52,6 @@ get_che_launcher_container_id() {
 }
 
 get_che_launcher_version() {
-  LAUNCHER_CONTAINER_ID=$(get_che_launcher_container_id)
-  LAUNCHER_IMAGE_NAME=$(docker inspect --format='{{.Config.Image}}' "${LAUNCHER_CONTAINER_ID}")
-  LAUNCHER_IMAGE_VERSION=$(echo "${LAUNCHER_IMAGE_NAME}" | cut -d : -f2 -s)
-
   if [ -n "${LAUNCHER_IMAGE_VERSION}" ]; then
     echo "${LAUNCHER_IMAGE_VERSION}"
   else
@@ -73,7 +68,6 @@ is_boot2docker() {
 }
 
 has_docker_for_windows_ip() {
-  ETH0_ADDRESS=$(docker run --net host alpine /bin/sh -c "ifconfig eth0" | grep "inet addr:" | cut -d: -f2 | cut -d" " -f1)
   if [ "${ETH0_ADDRESS}" = "10.0.75.2" ]; then
     return 0
   else
@@ -97,6 +91,35 @@ is_docker_for_windows() {
   fi
 }
 
+get_list_of_che_system_environment_variables() {
+  # See: http://stackoverflow.com/questions/4128235/what-is-the-exact-meaning-of-ifs-n
+  IFS=$'\n'
+  
+  DOCKER_ENV=$(mktemp)
+
+  # First grab all known CHE_ variables
+  CHE_VARIABLES=$(env | grep CHE_)
+  for SINGLE_VARIABLE in "${CHE_VARIABLES}"; do
+    echo "${SINGLE_VARIABLE}" >> $DOCKER_ENV
+  done
+
+  # Add in known proxy variables
+  if [ ! -z ${http_proxy+x} ]; then 
+    echo "http_proxy=${http_proxy}" >> $DOCKER_ENV
+  fi
+
+  if [ ! -z ${https_proxy+x} ]; then 
+    echo "https_proxy=${https_proxy}" >> $DOCKER_ENV
+  fi
+
+  if [ ! -z ${no_proxy+x} ]; then 
+    echo "no_proxy=${no_proxy}" >> $DOCKER_ENV
+  fi
+
+  echo $DOCKER_ENV
+}
+
+
 get_docker_install_type() {
   if is_boot2docker; then
     echo "boot2docker"
@@ -112,22 +135,15 @@ get_docker_install_type() {
 get_docker_host_ip() {
   case $(get_docker_install_type) in
    boot2docker)
-     NETWORK_IF="eth1"
+     echo $ETH1_ADDRESS
    ;;
    native)
-     NETWORK_IF="docker0"
+     echo $DOCKER0_ADDRESS
    ;;
    *)
-     NETWORK_IF="eth0"
+     echo $ETH0_ADDRESS
    ;;
   esac
-
-  docker run --rm --net host \
-            alpine sh -c \
-            "ip a show ${NETWORK_IF}" | \
-            grep 'inet ' | \
-            cut -d/ -f1 | \
-            awk '{ print $2}'
 }
 
 get_docker_host_os() {
@@ -140,9 +156,8 @@ get_docker_daemon_version() {
 
 get_che_hostname() {
   INSTALL_TYPE=$(get_docker_install_type)
-  if [ "${INSTALL_TYPE}" = "boot2docker" ] ||
-     [ "${INSTALL_TYPE}" = "docker4windows" ]; then
-    get_docker_host_ip
+  if [ "${INSTALL_TYPE}" = "boot2docker" ]; then
+    echo $DEFAULT_DOCKER_HOST_IP
   else
     echo "localhost"
   fi
@@ -281,8 +296,4 @@ execute_command_with_progress() {
     ;;
   esac
   printf "\n"
-}
-
-container_self_destruction() {
-  docker rm -f "$(get_che_launcher_container_id)" > /dev/null 2>&1
 }

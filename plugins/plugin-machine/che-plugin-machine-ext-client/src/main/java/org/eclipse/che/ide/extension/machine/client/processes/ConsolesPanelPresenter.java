@@ -10,6 +10,7 @@
  *******************************************************************************/
 package org.eclipse.che.ide.extension.machine.client.processes;
 
+import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.user.client.ui.AcceptsOneWidget;
 import com.google.gwt.user.client.ui.IsWidget;
 import com.google.inject.Inject;
@@ -20,6 +21,7 @@ import org.eclipse.che.api.core.model.machine.Machine;
 import org.eclipse.che.api.machine.shared.dto.CommandDto;
 import org.eclipse.che.api.machine.shared.dto.MachineDto;
 import org.eclipse.che.api.machine.shared.dto.MachineProcessDto;
+import org.eclipse.che.api.machine.shared.dto.event.MachineStatusEvent;
 import org.eclipse.che.api.promises.client.Operation;
 import org.eclipse.che.api.promises.client.OperationException;
 import org.eclipse.che.api.promises.client.PromiseError;
@@ -36,6 +38,7 @@ import org.eclipse.che.ide.api.parts.HasView;
 import org.eclipse.che.ide.api.parts.PartPresenter;
 import org.eclipse.che.ide.api.parts.WorkspaceAgent;
 import org.eclipse.che.ide.api.workspace.event.EnvironmentOutputEvent;
+import org.eclipse.che.ide.api.workspace.event.MachineStatusChangedEvent;
 import org.eclipse.che.ide.api.workspace.event.WorkspaceStoppedEvent;
 import org.eclipse.che.ide.dto.DtoFactory;
 import org.eclipse.che.ide.extension.machine.client.MachineLocalizationConstant;
@@ -83,7 +86,8 @@ public class ConsolesPanelPresenter implements ConsolesPanelView.ActionDelegate,
                                                                      WorkspaceStoppedEvent.Handler,
                                                                      MachineStateEvent.Handler,
                                                                      WsAgentStateHandler,
-                                                                     EnvironmentOutputEvent.Handler{
+                                                                     EnvironmentOutputEvent.Handler,
+                                                                     MachineStatusChangedEvent.Handler {
 
     private static final String DEFAULT_TERMINAL_NAME = "Terminal";
 
@@ -159,6 +163,7 @@ public class ConsolesPanelPresenter implements ConsolesPanelView.ActionDelegate,
         eventBus.addHandler(WsAgentStateEvent.TYPE, this);
         eventBus.addHandler(MachineStateEvent.TYPE, this);
         eventBus.addHandler(EnvironmentOutputEvent.TYPE, this);
+        eventBus.addHandler(MachineStatusChangedEvent.TYPE, this);
 
         rootNode = new ProcessTreeNode(ROOT_NODE, null, null, null, rootNodes);
 
@@ -179,6 +184,14 @@ public class ConsolesPanelPresenter implements ConsolesPanelView.ActionDelegate,
     }
 
     @Override
+    public void onMachineStatusChanged(MachineStatusChangedEvent event) {
+        if (MachineStatusEvent.EventType.ERROR == event.getEventType()) {
+            removeMachineNode(event.getMachineId());
+            return;
+        }
+    }
+
+    @Override
     public void onMachineCreating(MachineStateEvent event) {
         workspaceAgent.setActivePart(parent);
         addMachineNode(event.getMachine());
@@ -189,7 +202,17 @@ public class ConsolesPanelPresenter implements ConsolesPanelView.ActionDelegate,
 
     @Override
     public void onMachineDestroyed(MachineStateEvent event) {
-        ProcessTreeNode destroyedMachineNode = machineNodes.get(event.getMachineId());
+        removeMachineNode(event.getMachineId());
+    }
+
+    /**
+     * Removes machine node from the machines tree.
+     *
+     * @param machineId
+     *          machine ID
+     */
+    private void removeMachineNode(String machineId) {
+        ProcessTreeNode destroyedMachineNode = machineNodes.get(machineId);
         if (destroyedMachineNode == null) {
             return;
         }
@@ -241,10 +264,35 @@ public class ConsolesPanelPresenter implements ConsolesPanelView.ActionDelegate,
         return null;
     }
 
+    /**
+     * Prints text to the machine console.
+     *
+     * @param machineId
+     *          machine Id
+     * @param text
+     *          text to be printed
+     */
     public void printMachineOutput(String machineId, String text) {
         OutputConsole console = consoles.get(machineId);
         if (console != null && console instanceof DefaultOutputConsole) {
             ((DefaultOutputConsole)console).printText(text);
+        }
+    }
+
+    /**
+     * Prints text to the machine console.
+     *
+     * @param machineId
+     *          machine Id
+     * @param text
+     *          text to be printed
+     * @param color
+     *          color of the text or NULL
+     */
+    public void printMachineOutput(String machineId, String text, String color) {
+        OutputConsole console = consoles.get(machineId);
+        if (console != null && console instanceof DefaultOutputConsole) {
+            ((DefaultOutputConsole)console).printText(text, color);
         }
     }
 
@@ -263,23 +311,35 @@ public class ConsolesPanelPresenter implements ConsolesPanelView.ActionDelegate,
 
         rootNodes.add(machineNode);
 
+        view.setProcessesData(rootNode);
+
         OutputConsole outputConsole = commandConsoleFactory.create("");
         updateCommandOutput(machine.getId(), outputConsole);
 
-        view.setProcessesData(rootNode);
+        restoreState(machine);
+
         return machineNode;
     }
 
-    private void restoreState(final Machine machine) {
-        machineService.getProcesses(machine.getId()).then(new Operation<List<MachineProcessDto>>() {
+    private void restoreState(final org.eclipse.che.api.core.model.machine.Machine machine) {
+        machineService.getProcesses(machine.getWorkspaceId(),
+                                    machine.getId()).then(new Operation<List<MachineProcessDto>>() {
             @Override
             public void apply(List<MachineProcessDto> arg) throws OperationException {
                 for (MachineProcessDto machineProcessDto : arg) {
+                    /**
+                     * Do not show the process if the command line has prefix #hidden
+                     */
+                    if (machineProcessDto.getCommandLine() != null && !machineProcessDto.getCommandLine().isEmpty()
+                            && machineProcessDto.getCommandLine().startsWith("#hidden")) {
+                        continue;
+                    }
+
                     final CommandDto commandDto = dtoFactory.createDto(CommandDto.class)
-                                                            .withName(machineProcessDto.getName())
-                                                            .withAttributes(machineProcessDto.getAttributes())
-                                                            .withCommandLine(machineProcessDto.getCommandLine())
-                                                            .withType(machineProcessDto.getType());
+                            .withName(machineProcessDto.getName())
+                            .withAttributes(machineProcessDto.getAttributes())
+                            .withCommandLine(machineProcessDto.getCommandLine())
+                            .withType(machineProcessDto.getType());
 
                     final CommandType type = commandTypeRegistry.getCommandTypeById(commandDto.getType());
                     if (type != null) {
@@ -289,7 +349,6 @@ public class ConsolesPanelPresenter implements ConsolesPanelView.ActionDelegate,
                         console.attachToProcess(machineProcessDto);
                         addCommandOutput(machine.getId(), console);
                     }
-
                 }
             }
         }).catchError(new Operation<PromiseError>() {
@@ -360,17 +419,17 @@ public class ConsolesPanelPresenter implements ConsolesPanelView.ActionDelegate,
 
         if (selectedTreeNode == null) {
             if (appContext.getDevMachine() != null) {
-                onAddTerminal(appContext.getDevMachine().getId());
+                onAddTerminal(appContext.getWorkspaceId(), appContext.getDevMachine().getId());
             }
             return;
         }
 
         if (selectedTreeNode.getType() == MACHINE_NODE) {
-            onAddTerminal(selectedTreeNode.getId());
+            onAddTerminal(appContext.getWorkspaceId(), selectedTreeNode.getId());
         } else {
             if (selectedTreeNode.getParent() != null &&
                 selectedTreeNode.getParent().getType() == MACHINE_NODE) {
-                onAddTerminal(appContext.getDevMachine().getId());
+                onAddTerminal(appContext.getWorkspaceId(), appContext.getDevMachine().getId());
             }
         }
     }
@@ -382,8 +441,8 @@ public class ConsolesPanelPresenter implements ConsolesPanelView.ActionDelegate,
      *         id of machine in which the terminal will be added
      */
     @Override
-    public void onAddTerminal(@NotNull final String machineId) {
-        machineService.getMachine(machineId).then(new Operation<MachineDto>() {
+    public void onAddTerminal(@NotNull final String workspaceId, @NotNull final String machineId) {
+        machineService.getMachine(workspaceId, machineId).then(new Operation<MachineDto>() {
             @Override
             public void apply(MachineDto arg) throws OperationException {
                 org.eclipse.che.ide.extension.machine.client.machine.Machine machine = entityFactory.createMachine(arg);
@@ -552,11 +611,17 @@ public class ConsolesPanelPresenter implements ConsolesPanelView.ActionDelegate,
     }
 
     @Override
-    public void onContextMenu(int mouseX, int mouseY, ProcessTreeNode node) {
-        contextTreeNode = node;
+    public void onContextMenu(final int mouseX, final int mouseY, final ProcessTreeNode node) {
+        view.selectNode(node);
 
-        ConsoleTreeContextMenu contextMenu = consoleTreeContextMenuFactory.newContextMenu(node);
-        contextMenu.show(mouseX, mouseY);
+        Scheduler.get().scheduleDeferred(new Scheduler.ScheduledCommand() {
+            @Override
+            public void execute() {
+                contextTreeNode = node;
+                ConsoleTreeContextMenu contextMenu = consoleTreeContextMenuFactory.newContextMenu(node);
+                contextMenu.show(mouseX, mouseY);
+            }
+        });
     }
 
     private ConfirmCallback getConfirmCloseConsoleCallback(final OutputConsole console, final ProcessTreeNode node) {
@@ -731,4 +796,5 @@ public class ConsolesPanelPresenter implements ConsolesPanelView.ActionDelegate,
     public void onWsAgentStopped(WsAgentStateEvent event) {
         //do nothing
     }
+
 }

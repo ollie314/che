@@ -15,7 +15,7 @@ import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
 
-import org.eclipse.che.api.machine.server.MachineService;
+import org.eclipse.che.api.environment.server.MachineService;
 import org.eclipse.che.api.machine.server.spi.Instance;
 import org.eclipse.che.api.machine.server.spi.InstanceProcess;
 import org.eclipse.che.plugin.docker.machine.DockerInstance;
@@ -49,6 +49,8 @@ public class LocalDockerModule extends AbstractModule {
         bind(org.eclipse.che.plugin.docker.machine.node.WorkspaceFolderPathProvider.class)
                 .to(org.eclipse.che.plugin.docker.machine.local.node.provider.LocalWorkspaceFolderPathProvider.class);
 
+        bind(org.eclipse.che.plugin.docker.client.DockerRegistryDynamicAuthResolver.class)
+                .to(org.eclipse.che.plugin.docker.client.NoOpDockerRegistryDynamicAuthResolverImpl.class);
         bind(org.eclipse.che.plugin.docker.client.DockerRegistryChecker.class).asEagerSingleton();
 
         Multibinder<String> devMachineEnvVars = Multibinder.newSetBinder(binder(),
