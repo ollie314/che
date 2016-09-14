@@ -50,7 +50,10 @@ import org.vectomatic.dom.svg.ui.SVGResource;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+
+import static org.eclipse.che.ide.extension.machine.client.processes.ProcessTreeNode.ProcessNodeType.MACHINE_NODE;
 
 /**
  * Implementation of {@link ProcessesPanelView}.
@@ -147,6 +150,7 @@ public class ProcessesPanelViewImpl extends BaseView<ProcessesPanelView.ActionDe
 
             @Override
             public void onNodeContextMenu(int mouseX, int mouseY, TreeNodeElement<ProcessTreeNode> node) {
+                delegate.onContextMenu(mouseX, mouseY, node.getData());
             }
 
             @Override
@@ -184,7 +188,7 @@ public class ProcessesPanelViewImpl extends BaseView<ProcessesPanelView.ActionDe
         setContentWidget(uiBinder.createAndBindUi(this));
         navigationPanel.getElement().setTabIndex(0);
 
-        SubPanel subPanel = subPanelFactory.newPanel();
+        final SubPanel subPanel = subPanelFactory.newPanel();
         subPanel.setFocusListener(this);
         splitLayoutPanel.add(subPanel.getView());
         focusedSubPanel = subPanel;
@@ -280,6 +284,10 @@ public class ProcessesPanelViewImpl extends BaseView<ProcessesPanelView.ActionDe
             public void onWidgetRemoving(SubPanel.RemoveCallback removeCallback) {
                 final ProcessTreeNode treeNode = widget2TreeNodes.get(widgetToShow.getWidget());
 
+                if (treeNode == null) {
+                    return;
+                }
+
                 switch (treeNode.getType()) {
                     case COMMAND_NODE:
                         delegate.onCommandTabClosing(treeNode, removeCallback);
@@ -288,6 +296,10 @@ public class ProcessesPanelViewImpl extends BaseView<ProcessesPanelView.ActionDe
                         delegate.onTerminalTabClosing(treeNode);
                         removeCallback.remove();
                         break;
+                    case MACHINE_NODE:
+                        removeCallback.remove();
+                        break;
+
                 }
             }
         });
@@ -301,11 +313,10 @@ public class ProcessesPanelViewImpl extends BaseView<ProcessesPanelView.ActionDe
 
     @Override
     public void selectNode(ProcessTreeNode node) {
-        SelectionModel<ProcessTreeNode> selectionModel = processTree.getSelectionModel();
+        final SelectionModel<ProcessTreeNode> selectionModel = processTree.getSelectionModel();
 
         if (node == null) {
             selectionModel.clearSelections();
-            return;
         } else {
             selectionModel.setTreeActive(true);
             selectionModel.clearSelections();
@@ -313,8 +324,6 @@ public class ProcessesPanelViewImpl extends BaseView<ProcessesPanelView.ActionDe
 
             node.getTreeNodeElement().scrollIntoView();
         }
-
-        delegate.onTreeNodeSelected(node);
     }
 
     @Override
@@ -329,6 +338,16 @@ public class ProcessesPanelViewImpl extends BaseView<ProcessesPanelView.ActionDe
         }
 
         return -1;
+    }
+
+    @Nullable
+    @Override
+    public ProcessTreeNode getSelectedTreeNode() {
+        List<ProcessTreeNode> selectedNodes = processTree.getSelectionModel().getSelectedNodes();
+        if (!selectedNodes.isEmpty()) {
+            return selectedNodes.get(0);
+        }
+        return null;
     }
 
     @Override
@@ -399,7 +418,7 @@ public class ProcessesPanelViewImpl extends BaseView<ProcessesPanelView.ActionDe
         activeProcessId = processId;
 
         final ProcessTreeNode treeNode = processTreeNodes.get(processId);
-        if (treeNode != null) {
+        if (treeNode != null && !MACHINE_NODE.equals(treeNode.getType())) {
             treeNode.setHasUnreadContent(false);
             treeNode.getTreeNodeElement().getClassList().remove(machineResources.getCss().badgeVisible());
         }
@@ -440,8 +459,10 @@ public class ProcessesPanelViewImpl extends BaseView<ProcessesPanelView.ActionDe
     public void focusGained(SubPanel subPanel, IsWidget widget) {
         focusedSubPanel = subPanel;
 
-        ProcessTreeNode processTreeNode = widget2TreeNodes.get(widget);
-        selectNode(processTreeNode);
+        final ProcessTreeNode processTreeNode = widget2TreeNodes.get(widget);
+        if (processTreeNode != null) {
+            selectNode(processTreeNode);
+        }
     }
 
     @Override

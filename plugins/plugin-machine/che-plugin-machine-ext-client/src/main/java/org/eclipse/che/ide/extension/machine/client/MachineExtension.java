@@ -30,6 +30,7 @@ import org.eclipse.che.ide.api.keybinding.KeyBuilder;
 import org.eclipse.che.ide.api.machine.events.WsAgentStateEvent;
 import org.eclipse.che.ide.api.machine.events.WsAgentStateHandler;
 import org.eclipse.che.ide.api.parts.PartStackType;
+import org.eclipse.che.ide.api.parts.Perspective;
 import org.eclipse.che.ide.api.parts.PerspectiveManager;
 import org.eclipse.che.ide.api.parts.WorkspaceAgent;
 import org.eclipse.che.ide.extension.machine.client.actions.CreateMachineAction;
@@ -45,6 +46,9 @@ import org.eclipse.che.ide.extension.machine.client.actions.SwitchPerspectiveAct
 import org.eclipse.che.ide.extension.machine.client.command.custom.CustomCommandType;
 import org.eclipse.che.ide.extension.machine.client.command.valueproviders.ServerPortProvider;
 import org.eclipse.che.ide.extension.machine.client.machine.MachineStatusNotifier;
+import org.eclipse.che.ide.extension.machine.client.processes.actions.CloseConsoleAction;
+import org.eclipse.che.ide.extension.machine.client.processes.actions.ReRunProcessAction;
+import org.eclipse.che.ide.extension.machine.client.processes.actions.StopProcessAction;
 import org.eclipse.che.ide.extension.machine.client.processes.panel.ProcessesPanelPresenter;
 import org.eclipse.che.ide.extension.machine.client.targets.EditTargetsAction;
 import org.eclipse.che.ide.part.explorer.project.ProjectExplorerPresenter;
@@ -93,6 +97,11 @@ public class MachineExtension {
         eventBus.addHandler(WsAgentStateEvent.TYPE, new WsAgentStateHandler() {
             @Override
             public void onWsAgentStarted(WsAgentStateEvent event) {
+                Perspective perspective = perspectiveManager.getActivePerspective();
+                if (perspective != null) {
+                    perspective.restoreParts();
+                }
+
                 machinePortProvider.get();
                 /* Do not show terminal on factories by default */
                 if (appContext.getFactory() == null) {
@@ -117,6 +126,17 @@ public class MachineExtension {
                 if (appContext.getFactory() == null) {
                     workspaceAgent.setActivePart(processesPanelPresenter);
                 }
+
+                Scheduler.get().scheduleDeferred(new Scheduler.ScheduledCommand() {
+                    @Override
+                    public void execute() {
+                        Perspective perspective = perspectiveManager.getActivePerspective();
+                        if (perspective != null) {
+                            perspective.maximizeBottomPart();
+                        }
+                    }
+                });
+
             }
         });
 
@@ -140,7 +160,10 @@ public class MachineExtension {
                                 NewTerminalAction newTerminalAction,
                                 EditTargetsAction editTargetsAction,
                                 IconRegistry iconRegistry,
-                                MachineResources machineResources) {
+                                MachineResources machineResources,
+                                ReRunProcessAction reRunProcessAction,
+                                StopProcessAction stopProcessAction,
+                                CloseConsoleAction closeConsoleAction) {
         final DefaultActionGroup mainMenu = (DefaultActionGroup)actionManager.getAction(GROUP_MAIN_MENU);
 
         final DefaultActionGroup workspaceMenu = (DefaultActionGroup)actionManager.getAction(GROUP_WORKSPACE);
@@ -202,6 +225,16 @@ public class MachineExtension {
         final DefaultActionGroup commandList = new DefaultActionGroup(GROUP_COMMANDS_DROPDOWN, true, actionManager);
         actionManager.registerAction(GROUP_COMMANDS_LIST, commandList);
         commandList.add(editCommandsAction, FIRST);
+
+
+        // Consoles tree context menu group
+        DefaultActionGroup consolesTreeContextMenu =
+                (DefaultActionGroup)actionManager.getAction(IdeActions.GROUP_CONSOLES_TREE_CONTEXT_MENU);
+
+        consolesTreeContextMenu.add(reRunProcessAction);
+        consolesTreeContextMenu.add(stopProcessAction);
+        consolesTreeContextMenu.add(closeConsoleAction);
+
 
         // Define hot-keys
         keyBinding.getGlobal().addKey(new KeyBuilder().alt().charCode(KeyCodeMap.F12).build(), "newTerminal");

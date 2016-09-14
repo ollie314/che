@@ -51,6 +51,7 @@ import org.eclipse.che.ide.extension.machine.client.outputspanel.console.Command
 import org.eclipse.che.ide.extension.machine.client.perspective.terminal.TerminalPresenter;
 import org.eclipse.che.ide.extension.machine.client.processes.ProcessFinishedEvent;
 import org.eclipse.che.ide.extension.machine.client.processes.ProcessTreeNode;
+import org.eclipse.che.ide.extension.machine.client.processes.actions.ConsoleTreeContextMenuFactory;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -90,37 +91,39 @@ public class ProcessesPanelPresenterTest {
     private static final int    PID            = 101;
 
     @Mock
-    private DtoFactory                  dtoFactory;
+    private DtoFactory                    dtoFactory;
     @Mock
-    private CommandConsoleFactory       commandConsoleFactory;
+    private CommandConsoleFactory         commandConsoleFactory;
     @Mock
-    private CommandTypeRegistry         commandTypeRegistry;
+    private CommandTypeRegistry           commandTypeRegistry;
     @Mock
-    private DialogFactory               dialogFactory;
+    private ConsoleTreeContextMenuFactory consoleTreeContextMenuFactory;
     @Mock
-    private WorkspaceAgent              workspaceAgent;
+    private DialogFactory                 dialogFactory;
     @Mock
-    private NotificationManager         notificationManager;
+    private WorkspaceAgent                workspaceAgent;
     @Mock
-    private MachineLocalizationConstant localizationConstant;
+    private NotificationManager           notificationManager;
     @Mock
-    private TerminalFactory             terminalFactory;
+    private MachineLocalizationConstant   localizationConstant;
     @Mock
-    private ProcessesPanelView          view;
+    private TerminalFactory               terminalFactory;
     @Mock
-    private MachineResources            resources;
+    private ProcessesPanelView            view;
     @Mock
-    private AppContext                  appContext;
+    private MachineResources              resources;
     @Mock
-    private MachineServiceClient        machineService;
+    private AppContext                    appContext;
     @Mock
-    private EntityFactory               entityFactory;
+    private MachineServiceClient          machineService;
     @Mock
-    private EventBus                    eventBus;
+    private EntityFactory                 entityFactory;
     @Mock
-    private WorkspaceDto                workspace;
+    private EventBus                      eventBus;
     @Mock
-    private OutputConsole               outputConsole;
+    private WorkspaceDto                  workspace;
+    @Mock
+    private OutputConsole                 outputConsole;
 
     @Mock
     private Promise<List<MachineDto>> machinesPromise;
@@ -175,7 +178,8 @@ public class ProcessesPanelPresenterTest {
                                                 commandConsoleFactory,
                                                 dialogFactory,
                                                 dtoFactory,
-                                                commandTypeRegistry);
+                                                commandTypeRegistry,
+                                                consoleTreeContextMenuFactory);
     }
 
     @Test
@@ -217,7 +221,6 @@ public class ProcessesPanelPresenterTest {
         verify(workspaceAgent).setActivePart(anyObject());
         verify(commandConsoleFactory).create(eq("machine_name"));
         verify(view).addWidget(anyString(), anyString(), anyObject(), anyObject(), anyBoolean());
-        verify(view).selectNode(anyObject());
         verify(view).setProcessesData(eq(presenter.rootNode));
     }
 
@@ -243,13 +246,13 @@ public class ProcessesPanelPresenterTest {
 
         presenter.addCommandOutput(MACHINE_ID, outputConsole);
 
-        verify(view).addProcessNode(anyObject());
         verify(view, never()).hideProcessOutput(anyString());
 
         verify(outputConsole).go(acceptsOneWidgetCaptor.capture());
         IsWidget widget = mock(IsWidget.class);
         acceptsOneWidgetCaptor.getValue().setWidget(widget);
 
+        verify(view).addProcessNode(anyObject());
         verify(view).addWidget(anyString(), anyString(), anyObject(), eq(widget), anyBoolean());
         verify(view, times(2)).selectNode(anyObject());
         verify(view).setProcessesData(anyObject());
@@ -274,13 +277,13 @@ public class ProcessesPanelPresenterTest {
 
         presenter.addCommandOutput(MACHINE_ID, outputConsole);
 
-        verify(view).addProcessNode(anyObject());
         verify(view, never()).hideProcessOutput(anyString());
 
         verify(outputConsole).go(acceptsOneWidgetCaptor.capture());
         IsWidget widget = mock(IsWidget.class);
         acceptsOneWidgetCaptor.getValue().setWidget(widget);
 
+        verify(view).addProcessNode(anyObject());
         verify(view).addWidget(anyString(), anyString(), anyObject(), eq(widget), anyBoolean());
         verify(view, times(2)).selectNode(anyObject());
         verify(view).setProcessesData(anyObject());
@@ -305,12 +308,12 @@ public class ProcessesPanelPresenterTest {
 
         presenter.addCommandOutput(MACHINE_ID, outputConsole);
 
-        verify(view).addProcessNode(anyObject());
         verify(view, never()).hideProcessOutput(anyString());
 
         verify(outputConsole).go(acceptsOneWidgetCaptor.capture());
         IsWidget widget = mock(IsWidget.class);
         acceptsOneWidgetCaptor.getValue().setWidget(widget);
+        verify(view).addProcessNode(anyObject());
 
         verify(view).addWidget(anyString(), anyString(), anyObject(), eq(widget), anyBoolean());
         verify(view, times(2)).selectNode(anyObject());
@@ -352,7 +355,7 @@ public class ProcessesPanelPresenterTest {
         verify(view, times(2)).setProcessesData(anyObject());
         verify(view, times(2)).selectNode(anyObject());
         verify(view).addWidget(anyString(), anyString(), anyObject(), eq(terminalWidget), anyBoolean());
-        verify(view, times(2)).addProcessNode(anyObject());
+        verify(view, times(1)).addProcessNode(anyObject());
         verify(terminal).setVisible(eq(true));
         verify(terminal).connect();
         verify(terminal).setListener(anyObject());
@@ -382,17 +385,14 @@ public class ProcessesPanelPresenterTest {
 
         presenter.addCommandOutput(MACHINE_ID, outputConsole);
 
-        verify(view, never()).addProcessNode(anyObject());
-        verify(view, never()).setProcessesData(anyObject());
-
         verify(outputConsole).go(acceptsOneWidgetCaptor.capture());
         IsWidget widget = mock(IsWidget.class);
         acceptsOneWidgetCaptor.getValue().setWidget(widget);
 
         verify(view).hideProcessOutput(eq(commandId));
-        verify(view).addWidget(eq(commandId), anyString(), anyObject(), eq(widget), anyBoolean());
-        verify(view).selectNode(anyObject());
-        verify(view).getNodeById(eq(commandId));
+        verify(view).addWidget(anyString(), anyString(), anyObject(), eq(widget), anyBoolean());
+        verify(view, times(2)).selectNode(anyObject());
+        verify(view).getNodeById(anyString());
     }
 
     @Test
@@ -477,7 +477,7 @@ public class ProcessesPanelPresenterTest {
         when(outputConsole.isFinished()).thenReturn(true);
         presenter.consoles.put(PROCESS_ID, outputConsole);
 
-        presenter.onProcessFinished(new ProcessFinishedEvent(null));
+        presenter.onProcessFinished(new ProcessFinishedEvent(PID));
 
         verify(view).setStopButtonVisibility(PROCESS_ID, false);
     }

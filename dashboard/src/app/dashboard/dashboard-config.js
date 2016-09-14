@@ -13,6 +13,7 @@
 import {DashboardController} from './dashboard.controller';
 import {DashboardLastWorkspacesController} from './last-workspaces/last-workspaces.controller';
 import {DashboardLastWorkspaces} from './last-workspaces/last-workspaces.directive';
+import {DashboardPanel} from './dashboard-panel/dashboard-panel.directive';
 
 export class DashboardConfig {
 
@@ -25,6 +26,9 @@ export class DashboardConfig {
     // controller
     register.controller('DashboardController', DashboardController);
 
+    // panel of last used entries
+    register.directive('dashboardPanel', DashboardPanel);
+
     // config routes
     register.app.config(($routeProvider) => {
       $routeProvider.accessWhen('/', {
@@ -33,7 +37,17 @@ export class DashboardConfig {
         controller: 'DashboardController',
         controllerAs: 'dashboardController',
         resolve: {
-          check: ['$q', 'cheService', 'cheAdminService', ($q, cheService, cheAdminService) => {
+          check: ['$q', '$location', 'cheWorkspace', 'cheService', 'cheAdminService', ($q, $location, cheWorkspace, cheService, cheAdminService) => {
+            cheWorkspace.fetchWorkspaces().then(() => {
+              if (cheWorkspace.getWorkspaces().length === 0) {
+                $location.path('/create-project');
+              }
+            }, (error) => {
+              if (error.status === 304 && cheWorkspace.getWorkspaces().length === 0) {
+                $location.path('/create-project');
+              }
+            });
+
             var defer = $q.defer();
             cheService.fetchServices().then(() => {
               cheAdminService.fetchServices().then(() => {
